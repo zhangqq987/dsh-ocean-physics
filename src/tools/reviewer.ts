@@ -7,7 +7,7 @@ import { join } from 'node:path'
 export function registerReviewerTool(ctx: Context) {
   ctx.tools.register(defineTool({
     name: 'review_session',
-    description: 'Audit artifacts: check figure-code consistency and verify DOIs. Returns a review report.',
+    description: 'Audit artifacts: check figure-code consistency, verify DOIs, and cross-check numbers mentioned in conversation against python stdout or saved data. Returns a review report.',
     parameters: {
       doiList: { type: 'array', required: false, description: 'List of DOI strings to verify' }
     },
