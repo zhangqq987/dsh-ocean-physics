@@ -15,7 +15,6 @@ import { registerEra5WindTool } from './tools/era5_wind.js'
 import { registerResearchStateTool } from './tools/research_state.js'
 import { registerReviewerHook } from './tools/reviewer_hook.js'
 import { registerTraceV2Tool } from './tools/trace_v2.js'
-import { registerSessionMemoryTool } from './tools/session_memory.js'
 import { registerCopernicusMarineTool } from './tools/copernicus_marine.js'
 import { registerNcepWindTool } from './tools/ncep_wind.js'
 import { registerArgoProfileSkill } from './skills/argo-profile.js'
@@ -40,7 +39,6 @@ registerMapStationsSkill(ctx)
   registerResearchStateTool(ctx)
 registerReviewerHook(ctx)
   registerTraceV2Tool(ctx)
-  registerSessionMemoryTool(ctx)
   registerCopernicusMarineTool(ctx)
   registerNcepWindTool(ctx)
   registerArgoProfileSkill(ctx)
