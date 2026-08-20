@@ -5,12 +5,11 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 const STATE_FILE = 'research-manifest.json'
 
 function loadState() {
-  if (!existsSync(STATE_FILE)) {
-    return { hypotheses: [], literature: [], datasets: [], figures: [], claims: [], forks: [] }
-  }
-  return JSON.parse(readFileSync(STATE_FILE, 'utf8'))
+  const empty = { hypotheses: [], literature: [], datasets: [], figures: [], claims: [], forks: [] }
+  if (!existsSync(STATE_FILE)) return empty
+  const raw = JSON.parse(readFileSync(STATE_FILE, 'utf8'))
+  return { ...empty, ...raw, hypotheses: raw.hypotheses || [] }
 }
-
 function saveState(state: any) {
   writeFileSync(STATE_FILE, JSON.stringify(state, null, 2), 'utf8')
 }
