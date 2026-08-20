@@ -21,7 +21,7 @@ python -c 'import requests, json; r=requests.get("https://api.crossref.org/works
 - Never invent citations. If both fail, tell the user.
 `
 
-export function apply(ctx: Context) {
+export function registerLitSearchSkill(ctx: Context) {
   ctx.skills?.register({
     name: 'lit-search',
     description: 'Search academic literature via OpenAlex or Crossref APIs. Returns DOI, title, year.',
