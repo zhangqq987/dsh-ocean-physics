@@ -1,12 +1,8 @@
-node_modules/
-.pnpm-store/
-.dsh/
-__pycache__/
+﻿node_modules/
+artifacts/
+dist/
 *.pyc
+__pycache__/
 .DS_Store
-Thumbs.db
 *.log
 .env
-test_ctd*.nc
-test_ctd*.png
-_write_*.py

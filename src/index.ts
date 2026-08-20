@@ -25,6 +25,16 @@ import { registerEditFigureTool } from './tools/edit_figure.js'
 import { registerReviewerUpgradeTool } from './tools/reviewer_upgrade.js'
 import { registerCoordinateTool } from './tools/coordinate.js'
 import { registerModalGpuTool } from './tools/modal_gpu.js'
+import { registerExportFigureTool } from './tools/export_figure.js'
+import { registerCompareFiguresTool } from './tools/compare_figures.js'
+import { registerComputeStatsTool } from './tools/compute_stats.js'
+import { registerSearchArxivTool } from './tools/search_arxiv.js'
+import { registerExportSessionReportTool } from './tools/export_session_report.js'
+import { registerValidateNetcdfTool } from './tools/validate_netcdf.js'
+import { registerMldClimatologySkill } from './skills/mld-climatology.js'
+import { registerTidalMixingSkill } from './skills/tidal-mixing.js'
+import { registerRossbyWavesSkill } from './skills/rossby-waves.js'
+import { registerPaperDraftSkill } from './skills/paper-draft.js'
 
 export const inject = ['tools', 'skills']
 
@@ -55,4 +65,14 @@ registerLogChatTool(ctx)
   registerReviewerUpgradeTool(ctx)
   registerCoordinateTool(ctx)
   registerModalGpuTool(ctx)
+registerExportFigureTool(ctx)
+  registerCompareFiguresTool(ctx)
+  registerComputeStatsTool(ctx)
+  registerSearchArxivTool(ctx)
+  registerExportSessionReportTool(ctx)
+  registerValidateNetcdfTool(ctx)
+  registerMldClimatologySkill(ctx)
+  registerTidalMixingSkill(ctx)
+  registerRossbyWavesSkill(ctx)
+  registerPaperDraftSkill(ctx)
 }
