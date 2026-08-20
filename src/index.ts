@@ -8,6 +8,11 @@ import { registerHpcTool } from './tools/hpc.js'
 import { registerCtdSkill } from './skills/ctd-nc-processing.js'
 import { registerN2Skill } from './skills/n2-compute.js'
 import { registerLitSearchSkill } from './skills/lit-search.js'
+import { registerMapStationsSkill } from './skills/map-stations.js'
+import { registerWodQuerySkill } from './skills/wod-query.js'
+import { registerSectionTool } from './tools/section.js'
+import { registerEra5WindTool } from './tools/era5_wind.js'
+import { registerResearchStateTool } from './tools/research_state.js'
 
 export const inject = ['tools', 'skills']
 
@@ -21,4 +26,9 @@ export function apply(ctx: Context) {
   registerN2Skill(ctx)
   registerHpcTool(ctx)
   registerLitSearchSkill(ctx)
+registerMapStationsSkill(ctx)
+  registerWodQuerySkill(ctx)
+  registerSectionTool(ctx)
+  registerEra5WindTool(ctx)
+  registerResearchStateTool(ctx)
 }
