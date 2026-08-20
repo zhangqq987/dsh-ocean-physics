@@ -1,25 +1,49 @@
-import type { Context } from '@deepseek-ai/cordis'
-import { defineTool } from '@deepseek-ai/dsh-tools'
-import { existsSync, readFileSync } from 'node:fs'
+﻿import type { Context } from '@deepseek-ai/cordis'
+import { existsSync, readFileSync, appendFileSync, mkdirSync } from 'node:fs'
+import { createHash } from 'node:crypto'
 
-export function registerViewReviewLogTool(ctx: Context) {
-  ctx.tools.register(defineTool({
-    name: 'view_review_log',
-    description: 'View the last N entries of the auto-review log.',
-    parameters: {
-      last: { type: 'number', description: 'Number of recent entries to show (default 10)' },
-    },
-    output: { schema: { type: 'string' }, render: (_a: any, v: any) => [{ type: 'text', text: v }] },
-    async execute(args: any) {
-      const logPath = 'artifacts/review_log.jsonl'
-      if (!existsSync(logPath)) return 'No review log yet.'
-      const lines = readFileSync(logPath, 'utf8').trim().split('\n').filter(Boolean)
-      const n = (args.last && args.last > 0) ? args.last : 10
-      const recent = lines.slice(-n).map((l: string, i: number) => {
-        const e = JSON.parse(l)
-        return `#${lines.length - n + i} [${e.time}] ${e.tool}: ${e.ok ? 'OK' : 'FAIL'} | ${(e.checks || []).join(' | ')}`
-      })
-      return recent.join('\n')
-    },
-  }))
+const REVIEW_LOG = 'artifacts/review_log.jsonl'
+
+function ensureDir() {
+  if (!existsSync('artifacts')) mkdirSync('artifacts', { recursive: true })
+}
+
+function hashFile(path: string): string {
+  if (!existsSync(path)) return 'missing'
+  return createHash('sha256').update(readFileSync(path)).digest('hex').slice(0, 16)
+}
+
+export function registerReviewerHook(ctx: Context) {
+  ctx.on('tool/result', (e: any) => {
+    ensureDir()
+    const entry: any = {
+      time: new Date().toISOString(),
+      tool: e.tool || 'unknown',
+      ok: true,
+      checks: [] as string[],
+    }
+
+    if (e.tool === 'generate_figure_with_trace') {
+      try {
+        const args = e.args || {}
+        const figurePath = 'artifacts/' + (args.figureName || 'unknown.png')
+        const codePath = 'artifacts/' + (args.figureName || 'unknown').replace(/\.png$/, '.py')
+        entry.checks.push('figure_hash=' + hashFile(figurePath))
+        entry.checks.push('code_hash=' + hashFile(codePath))
+        if (hashFile(figurePath) === 'missing') { entry.ok = false; entry.checks.push('ERROR: figure missing') }
+        if (hashFile(codePath) === 'missing') { entry.ok = false; entry.checks.push('ERROR: code missing') }
+      } catch (err: any) {
+        entry.ok = false
+        entry.checks.push('ERROR: ' + err.message)
+      }
+    }
+
+    if (e.tool === 'ocean_compute_N2') {
+      const hasN2 = /N2\s*=\s*\[?-?[\d.]+/.test(String(e.output || ''))
+      entry.checks.push('n2_output_has_value=' + hasN2)
+      if (!hasN2) { entry.ok = false; entry.checks.push('WARNING: no N2 value') }
+    }
+
+    appendFileSync(REVIEW_LOG, JSON.stringify(entry) + '\n')
+  })
 }
