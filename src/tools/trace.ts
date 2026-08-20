@@ -13,7 +13,7 @@ export function registerTraceTool(ctx: Context) {
       pythonCode: { type: 'string', description: 'Full Python script that creates and saves a figure' },
       figureName: { type: 'string', description: 'Filename for the figure, e.g. mld_vs_wind.png' }
     },
-    output: { schema: { type: 'string' } },
+    output: 'string',
     async execute(args) {
       const artifactDir = 'artifacts'
       if (!existsSync(artifactDir)) mkdirSync(artifactDir, { recursive: true })

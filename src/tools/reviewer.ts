@@ -11,7 +11,7 @@ export function registerReviewerTool(ctx: Context) {
     parameters: {
       doiList: { type: 'array', description: 'List of DOI strings to verify' }
     },
-    output: { schema: { type: 'string' } },
+    output: 'string',
     async execute(args) {
       const artifactDir = 'artifacts'
       const manifestPath = join(artifactDir, 'manifest.json')

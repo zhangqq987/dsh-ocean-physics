@@ -11,7 +11,7 @@ export function registerDensityTool(ctx: Context) {
       salinity: { type: 'number', required: true, description: 'practical salinity SP / PSU' },
       pressure: { type: 'number', required: true, description: 'pressure dbar' },
     },
-    output: { schema: { type: 'string' } },
+    output: 'string',
     async execute(args) {
       const out = execSync(
         `python -c "import gsw; sp=${args.salinity}; t=${args.temperature}; p=${args.pressure}; SA=gsw.SA_from_SP(sp,p,0,0); CT=gsw.CT_from_t(SA,t,p); print(gsw.sigma0(SA,CT))"`,

@@ -13,7 +13,7 @@ export function registerN2Tool(ctx: Context) {
       CT: { type: 'array', required: true, description: 'Array of conservative temperature in degC, same length as pressure' },
       latitude: { type: 'number', description: 'Latitude in degrees (default 0)' }
     },
-    output: { schema: { type: 'string' } },
+    output: 'string',
     async execute(args) {
       const p = JSON.stringify(args.pressure)
       const sa = JSON.stringify(args.SA)

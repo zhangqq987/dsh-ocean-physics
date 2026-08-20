@@ -11,7 +11,7 @@ export function registerHypothesisTool(ctx: Context) {
       content: { type: 'string', required: true, description: 'Hypothesis text' },
       evidence: { type: 'string', description: 'Evidence file path' }
     },
-    output: { schema: { type: 'string' } },
+    output: 'string',
     async execute(args) {
       const p = 'research-manifest.json'
       const m = existsSync(p) ? JSON.parse(readFileSync(p, 'utf8')) : { hypotheses: [] }
