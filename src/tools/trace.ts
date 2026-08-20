@@ -21,13 +21,12 @@ export function registerTraceTool(ctx: Context) {
     parameters: {
       pythonCode: { type: 'string', required: true, description: 'Full Python script' },
       figureName: { type: 'string', required: true, description: 'Output filename, e.g. mld_vs_wind.png' },
-      description: { type: 'string', required: false, description: 'Plain-language description of what this figure shows' },
+      description: { type: 'string', required: false, default: 'no description', description: 'Plain-language description of what this figure shows' },
     },
     output: { schema: { type: 'string' }, render: (_a: any, v: any) => [{ type: 'text', text: v }] },
     async execute(args: any) {
       ensureArtifacts()
 
-      // 读取最近对话历史（从 ctx 的 messages 里拿，如果有的话）
       let chatContext = 'N/A'
       try {
         const historyPath = 'artifacts/chat_history.jsonl'
@@ -69,7 +68,6 @@ export function registerTraceTool(ctx: Context) {
       }
       appendFileSync('artifacts/review_log.jsonl', JSON.stringify(reviewEntry) + '\n')
 
-      // 同时写 manifest.json（完整审计工件）
       const manifestPath = 'artifacts/manifest.json'
       const manifest = existsSync(manifestPath) ? JSON.parse(readFileSync(manifestPath, 'utf8')) : []
       manifest.push({
