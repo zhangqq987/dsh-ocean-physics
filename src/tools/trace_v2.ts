@@ -19,7 +19,11 @@ export function registerTraceV2Tool(ctx: Context) {
       if (!existsSync(artifactDir)) mkdirSync(artifactDir, { recursive: true })
 
       const scriptPath = join(artifactDir, args.figureName.replace(/\.\w+$/, '') + '.py')
-      const codeToRun = args.pythonCode + `\nimport matplotlib.pyplot as plt\nplt.savefig('${join(artifactDir, args.figureName)}', dpi=150, bbox_inches='tight')`
+      // Use forward slashes: join() yields backslash paths on Windows, and a raw
+      // backslash in a Python string literal parses as an escape (e.g. \t in
+      // 'artifacts\test_auto.png' -> TAB), which Windows rejects as a filename.
+      const figureRel = join(artifactDir, args.figureName).replace(/\\/g, '/')
+      const codeToRun = args.pythonCode + `\nimport matplotlib.pyplot as plt\nplt.savefig('${figureRel}', dpi=150, bbox_inches='tight')`
       writeFileSync(scriptPath, codeToRun, 'utf8')
 
       let envSnapshot = 'N/A'
