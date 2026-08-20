@@ -9,7 +9,7 @@ export function registerReviewerTool(ctx: Context) {
     name: 'review_session',
     description: 'Audit artifacts: check figure-code consistency, verify DOIs, and cross-check numbers mentioned in conversation against python stdout or saved data. Returns a review report.',
     parameters: {
-      doiList: { type: 'array', required: false, description: 'List of DOI strings to verify' }
+      doiList: { type: 'array', description: 'List of DOI strings to verify' }
     },
     output: { schema: { type: 'string' } },
     async execute(args) {
