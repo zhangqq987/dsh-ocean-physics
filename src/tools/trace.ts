@@ -1,42 +1,46 @@
-
 import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import { execSync } from 'node:child_process'
-import { writeFileSync, mkdirSync, existsSync } from 'node:fs'
+import { writeFileSync, mkdirSync, existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 export function registerTraceTool(ctx: Context) {
   ctx.tools.register(defineTool({
     name: 'generate_figure_with_trace',
-    description: 'Generate a figure from Python code and save the code to artifacts/ for reproducibility. Returns the figure path.',
+    description: 'Generate a figure from Python code, save the code and environment snapshot for full reproducibility.',
     parameters: {
-      pythonCode: { type: 'string', description: 'Full Python script that creates and saves a figure' },
-      figureName: { type: 'string', description: 'Filename for the figure, e.g. mld_vs_wind.png' }
+      pythonCode: { type: 'string', required: true, description: 'Full Python script that creates and saves a figure' },
+      figureName: { type: 'string', required: true, description: 'Filename for the figure, e.g. mld_vs_wind.png' },
     },
-    output: 'string',
+    output: { schema: { type: 'string' }, render: (_a, v) => [{ type: 'text', text: v }] },
     async execute(args) {
       const artifactDir = 'artifacts'
       if (!existsSync(artifactDir)) mkdirSync(artifactDir, { recursive: true })
 
-      const scriptPath = join(artifactDir, figureName.replace('.png', '') + '.py')
-      writeFileSync(scriptPath, args.pythonCode, 'utf8')
-
-      const figPath = join(artifactDir, args.figureName)
-      const codeToRun = args.pythonCode + `\nimport matplotlib.pyplot as plt\nplt.savefig('${figPath}', dpi=150, bbox_inches='tight')`
+      const scriptPath = join(artifactDir, args.figureName.replace('.png', '') + '.py')
+      const codeToRun = args.pythonCode + `\nimport matplotlib.pyplot as plt\nplt.savefig('${join(artifactDir, args.figureName)}', dpi=150, bbox_inches='tight')`
       writeFileSync(scriptPath, codeToRun, 'utf8')
+
+      let envSnapshot = 'N/A'
+      try {
+        envSnapshot = execSync('pip list --format=freeze', { encoding: 'utf8' })
+        writeFileSync(join(artifactDir, 'env.txt'), envSnapshot, 'utf8')
+      } catch (e) {
+        envSnapshot = 'Failed to capture: ' + String(e)
+      }
 
       try {
         execSync(`python "${scriptPath}"`, { encoding: 'utf8' })
       } catch (e) {
-        return 'Error: ' + String(e)
+        return 'Error running script: ' + String(e)
       }
 
       const manifestPath = join(artifactDir, 'manifest.json')
-      const manifest = existsSync(manifestPath) ? JSON.parse(require('node:fs').readFileSync(manifestPath, 'utf8')) : []
-      manifest.push({ figure: args.figureName, code: scriptPath, time: new Date().toISOString() })
+      const manifest = existsSync(manifestPath) ? JSON.parse(readFileSync(manifestPath, 'utf8')) : []
+      manifest.push({ figure: args.figureName, code: scriptPath, env: join(artifactDir, 'env.txt'), time: new Date().toISOString() })
       writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), 'utf8')
 
-      return figPath
+      return `Figure saved to ${join(artifactDir, args.figureName)}. Code: ${scriptPath}. Env: artifacts/env.txt`
     },
   }))
 }

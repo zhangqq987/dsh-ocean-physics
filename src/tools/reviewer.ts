@@ -1,4 +1,3 @@
-
 import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
@@ -7,11 +6,11 @@ import { join } from 'node:path'
 export function registerReviewerTool(ctx: Context) {
   ctx.tools.register(defineTool({
     name: 'review_session',
-    description: 'Audit artifacts: check figure-code consistency, verify DOIs, and cross-check numbers mentioned in conversation against python stdout or saved data. Returns a review report.',
+    description: 'Audit artifacts: check figure-code consistency and verify DOIs. Returns a review report.',
     parameters: {
-      doiList: { type: 'array', description: 'List of DOI strings to verify' }
+      doiList: { type: 'string', description: 'Comma-separated DOIs to verify, e.g. 10.1038/nature12345,10.1000/xyz' },
     },
-    output: 'string',
+    output: { schema: { type: 'string' }, render: (_a, v) => [{ type: 'text', text: v }] },
     async execute(args) {
       const artifactDir = 'artifacts'
       const manifestPath = join(artifactDir, 'manifest.json')
@@ -32,7 +31,7 @@ export function registerReviewerTool(ctx: Context) {
       }
 
       report += '\n## DOI Verification\n'
-      const dois = args.doiList || []
+      const dois = args.doiList ? args.doiList.split(',').map((d: string) => d.trim()) : []
       if (dois.length === 0) {
         report += 'No DOIs provided.\n'
       } else {
@@ -46,7 +45,7 @@ export function registerReviewerTool(ctx: Context) {
         }
       }
 
-      if (!existsSync(artifactDir)) require('node:fs').mkdirSync(artifactDir, { recursive: true })
+      if (!existsSync(artifactDir)) { require('node:fs').mkdirSync(artifactDir, { recursive: true }) }
       const reportPath = join(artifactDir, 'review_report.md')
       writeFileSync(reportPath, report, 'utf8')
       return report + '\n\nSaved to ' + reportPath
