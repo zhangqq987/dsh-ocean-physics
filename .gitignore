@@ -1,0 +1,12 @@
+node_modules/
+.pnpm-store/
+.dsh/
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
+*.log
+.env
+test_ctd*.nc
+test_ctd*.png
+_write_*.py
