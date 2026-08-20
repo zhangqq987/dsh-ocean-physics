@@ -20,6 +20,11 @@ import { registerCopernicusMarineTool } from './tools/copernicus_marine.js'
 import { registerNcepWindTool } from './tools/ncep_wind.js'
 import { registerArgoProfileSkill } from './skills/argo-profile.js'
 import { registerWindMldCorrelationSkill } from './skills/wind-mld-correlation.js'
+import { registerLogChatTool } from './tools/log_chat.js'
+import { registerEditFigureTool } from './tools/edit_figure.js'
+import { registerReviewerUpgradeTool } from './tools/reviewer_upgrade.js'
+import { registerCoordinateTool } from './tools/coordinate.js'
+import { registerModalGpuTool } from './tools/modal_gpu.js'
 
 export const inject = ['tools', 'skills']
 
@@ -45,4 +50,9 @@ registerViewReviewLogTool(ctx)
   registerNcepWindTool(ctx)
   registerArgoProfileSkill(ctx)
   registerWindMldCorrelationSkill(ctx)
+registerLogChatTool(ctx)
+  registerEditFigureTool(ctx)
+  registerReviewerUpgradeTool(ctx)
+  registerCoordinateTool(ctx)
+  registerModalGpuTool(ctx)
 }

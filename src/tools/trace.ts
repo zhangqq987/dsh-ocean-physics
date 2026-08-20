@@ -17,14 +17,28 @@ function hashFile(path: string): string {
 export function registerTraceTool(ctx: Context) {
   ctx.tools.register(defineTool({
     name: 'generate_figure_with_trace',
-    description: 'Generate a figure with audit trail: saves Python code, pip freeze env, and triggers auto-review.',
+    description: 'Generate a figure with full audit: code + env + description + chat context + auto-review.',
     parameters: {
       pythonCode: { type: 'string', required: true, description: 'Full Python script' },
       figureName: { type: 'string', required: true, description: 'Output filename, e.g. mld_vs_wind.png' },
+      description: { type: 'string', required: false, description: 'Plain-language description of what this figure shows' },
     },
     output: { schema: { type: 'string' }, render: (_a: any, v: any) => [{ type: 'text', text: v }] },
     async execute(args: any) {
       ensureArtifacts()
+
+      // 读取最近对话历史（从 ctx 的 messages 里拿，如果有的话）
+      let chatContext = 'N/A'
+      try {
+        const historyPath = 'artifacts/chat_history.jsonl'
+        if (existsSync(historyPath)) {
+          const lines = readFileSync(historyPath, 'utf8').trim().split('\n').filter(Boolean)
+          chatContext = lines.slice(-5).map((l: string) => {
+            try { return JSON.parse(l).content?.slice(0, 80) || '' } catch { return '' }
+          }).filter(Boolean).join(' | ')
+        }
+      } catch {}
+
       const figureRel = 'artifacts/' + args.figureName
       const codePath = join('artifacts', args.figureName.replace(/\.png$/, '.py'))
       const codeToRun = args.pythonCode + `\nimport matplotlib.pyplot as plt\nplt.savefig('${figureRel}', dpi=150, bbox_inches='tight')`
@@ -49,33 +63,26 @@ export function registerTraceTool(ctx: Context) {
         tool: 'generate_figure_with_trace',
         ok: figHash !== 'missing',
         auto_corrected: false,
+        description: args.description || 'no description',
+        chat_context: chatContext,
         checks: ['figure_hash=' + figHash, 'code_hash=' + codeHash, figHash === 'missing' ? 'ERROR' : 'OK'],
       }
       appendFileSync('artifacts/review_log.jsonl', JSON.stringify(reviewEntry) + '\n')
 
-      if (figHash === 'missing') {
-        try {
-          execSync(`python "${codePath}"`, { encoding: 'utf8' })
-          const retryHash = hashFile(figureRel)
-          appendFileSync('artifacts/review_log.jsonl', JSON.stringify({
-            time: new Date().toISOString(),
-            tool: 'reviewer_hook',
-            ok: retryHash !== 'missing',
-            auto_corrected: true,
-            checks: ['AUTO-RERUN: figure regenerated', 'new_hash=' + retryHash],
-          }) + '\n')
-        } catch (e2: any) {
-          appendFileSync('artifacts/review_log.jsonl', JSON.stringify({
-            time: new Date().toISOString(),
-            tool: 'reviewer_hook',
-            ok: false,
-            auto_corrected: true,
-            checks: ['AUTO-RERUN-FAILED: ' + String(e2).slice(0, 100)],
-          }) + '\n')
-        }
-      }
+      // 同时写 manifest.json（完整审计工件）
+      const manifestPath = 'artifacts/manifest.json'
+      const manifest = existsSync(manifestPath) ? JSON.parse(readFileSync(manifestPath, 'utf8')) : []
+      manifest.push({
+        figure: args.figureName,
+        code: codePath,
+        env: 'artifacts/env.txt',
+        description: args.description || '',
+        chat_context: chatContext,
+        time: new Date().toISOString(),
+      })
+      writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), 'utf8')
 
-      return `Figure saved to ${figureRel}\nCode: ${codePath}\nAudit: figure_hash=${figHash}, code_hash=${codeHash}`
+      return `Figure saved to ${figureRel}\nCode: ${codePath}\nDescription: ${args.description || 'none'}\nChat context: ${chatContext}\nAudit: figure_hash=${figHash}, code_hash=${codeHash}`
     },
   }))
 }
