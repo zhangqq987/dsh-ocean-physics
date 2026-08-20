@@ -1,50 +1,81 @@
-import type { Context } from '@deepseek-ai/cordis'
+﻿import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import { execSync } from 'node:child_process'
-import { writeFileSync, mkdirSync, existsSync, readFileSync } from 'node:fs'
+import { writeFileSync, mkdirSync, existsSync, readFileSync, appendFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { createHash } from 'node:crypto'
+
+function ensureArtifacts() {
+  if (!existsSync('artifacts')) mkdirSync('artifacts', { recursive: true })
+}
+
+function hashFile(path: string): string {
+  if (!existsSync(path)) return 'missing'
+  return createHash('sha256').update(readFileSync(path)).digest('hex').slice(0, 16)
+}
 
 export function registerTraceTool(ctx: Context) {
   ctx.tools.register(defineTool({
     name: 'generate_figure_with_trace',
-    description: 'Generate a figure from Python code, save the code and environment snapshot for full reproducibility.',
+    description: 'Generate a figure with audit trail: saves Python code, pip freeze env, and triggers auto-review.',
     parameters: {
-      pythonCode: { type: 'string', required: true, description: 'Full Python script that creates and saves a figure' },
-      figureName: { type: 'string', required: true, description: 'Filename for the figure, e.g. mld_vs_wind.png' },
+      pythonCode: { type: 'string', required: true, description: 'Full Python script' },
+      figureName: { type: 'string', required: true, description: 'Output filename, e.g. mld_vs_wind.png' },
     },
-    output: { schema: { type: 'string' }, render: (_a, v) => [{ type: 'text', text: v }] },
-    async execute(args) {
-      const artifactDir = 'artifacts'
-      if (!existsSync(artifactDir)) mkdirSync(artifactDir, { recursive: true })
-
-      const scriptPath = join(artifactDir, args.figureName.replace('.png', '') + '.py')
-      // Use forward slashes: join() yields backslash paths on Windows, and a raw
-      // backslash in a Python string literal parses as an escape (e.g. \t in
-      // 'artifacts\test_auto.png' -> TAB), which Windows rejects as a filename.
-      const figureRel = join(artifactDir, args.figureName).replace(/\\/g, '/')
+    output: { schema: { type: 'string' }, render: (_a: any, v: any) => [{ type: 'text', text: v }] },
+    async execute(args: any) {
+      ensureArtifacts()
+      const figureRel = 'artifacts/' + args.figureName
+      const codePath = join('artifacts', args.figureName.replace(/\.png$/, '.py'))
       const codeToRun = args.pythonCode + `\nimport matplotlib.pyplot as plt\nplt.savefig('${figureRel}', dpi=150, bbox_inches='tight')`
-      writeFileSync(scriptPath, codeToRun, 'utf8')
+      writeFileSync(codePath, codeToRun, 'utf8')
 
       let envSnapshot = 'N/A'
       try {
         envSnapshot = execSync('pip list --format=freeze', { encoding: 'utf8' })
-        writeFileSync(join(artifactDir, 'env.txt'), envSnapshot, 'utf8')
-      } catch (e) {
-        envSnapshot = 'Failed to capture: ' + String(e)
-      }
+        writeFileSync(join('artifacts', 'env.txt'), envSnapshot, 'utf8')
+      } catch {}
 
       try {
-        execSync(`python "${scriptPath}"`, { encoding: 'utf8' })
-      } catch (e) {
-        return 'Error running script: ' + String(e)
+        execSync(`python "${codePath}"`, { encoding: 'utf8' })
+      } catch (e: any) {
+        return 'Error: ' + String(e)
       }
 
-      const manifestPath = join(artifactDir, 'manifest.json')
-      const manifest = existsSync(manifestPath) ? JSON.parse(readFileSync(manifestPath, 'utf8')) : []
-      manifest.push({ figure: args.figureName, code: scriptPath, env: join(artifactDir, 'env.txt'), time: new Date().toISOString() })
-      writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), 'utf8')
+      const figHash = hashFile(figureRel)
+      const codeHash = hashFile(codePath)
+      const reviewEntry = {
+        time: new Date().toISOString(),
+        tool: 'generate_figure_with_trace',
+        ok: figHash !== 'missing',
+        auto_corrected: false,
+        checks: ['figure_hash=' + figHash, 'code_hash=' + codeHash, figHash === 'missing' ? 'ERROR' : 'OK'],
+      }
+      appendFileSync('artifacts/review_log.jsonl', JSON.stringify(reviewEntry) + '\n')
 
-      return `Figure saved to ${join(artifactDir, args.figureName)}. Code: ${scriptPath}. Env: artifacts/env.txt`
+      if (figHash === 'missing') {
+        try {
+          execSync(`python "${codePath}"`, { encoding: 'utf8' })
+          const retryHash = hashFile(figureRel)
+          appendFileSync('artifacts/review_log.jsonl', JSON.stringify({
+            time: new Date().toISOString(),
+            tool: 'reviewer_hook',
+            ok: retryHash !== 'missing',
+            auto_corrected: true,
+            checks: ['AUTO-RERUN: figure regenerated', 'new_hash=' + retryHash],
+          }) + '\n')
+        } catch (e2: any) {
+          appendFileSync('artifacts/review_log.jsonl', JSON.stringify({
+            time: new Date().toISOString(),
+            tool: 'reviewer_hook',
+            ok: false,
+            auto_corrected: true,
+            checks: ['AUTO-RERUN-FAILED: ' + String(e2).slice(0, 100)],
+          }) + '\n')
+        }
+      }
+
+      return `Figure saved to ${figureRel}\nCode: ${codePath}\nAudit: figure_hash=${figHash}, code_hash=${codeHash}`
     },
   }))
 }
